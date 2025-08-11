@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{f3154450-df6a-4e7f-90ea-eb0227e662db}</ProjectGuid>
+    <ProjectGuid>{ede9026a-3152-4304-9168-c065c35aaa9a}</ProjectGuid>
     <RootNamespace>SimTest</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -102,6 +102,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,7 +124,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Sim_Test.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Simulation\Character\Character.cpp" />
+    <ClCompile Include="Simulation\Character\Team.cpp" />
+    <ClCompile Include="Simulation\Entity.cpp" />
+    <ClCompile Include="Simulation\Grid\Grid.cpp" />
+    <ClCompile Include="Simulation\Grid\Point.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Simulation\Character\Character.h" />
+    <ClInclude Include="Simulation\Character\Team.h" />
+    <ClInclude Include="Simulation\Entity.h" />
+    <ClInclude Include="Simulation\Grid\Grid.h" />
+    <ClInclude Include="Simulation\Grid\Point.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
