@@ -10,7 +10,6 @@
 class Obstacle;
 
 
-// TODO: Create base class 
 class Grid
 {
 public:
@@ -30,7 +29,6 @@ public:
     
     std::vector<Point> findPath(const Point& start, const Point& end) const;
 
-    // TODO: update for hex grid
     void printGridWithPath(const Point& start, const Point& end) const;
     std::string makeGridWithPath(const Point& start, const Point& end);
 
@@ -38,8 +36,7 @@ private:
     int m_width;
     int m_height;
     std::vector<std::vector<bool>> m_grid;
-
-    // TODO: override in hex grid
+    
     std::vector<Point> getDirections() const;
 
     std::mt19937 m_gen;
