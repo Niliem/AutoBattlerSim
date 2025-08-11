@@ -4,10 +4,13 @@
 #include <unordered_map>
 #include <iostream>
 
-Grid::Grid(int w, int h, int seed)
+#include "GridType.h"
+
+Grid::Grid(int w, int h, std::unique_ptr<GridType> gridType, int seed)
     : m_width(w)
       , m_height(h)
       , m_gen(seed)
+      , m_gridType(std::move(gridType))
 {
     m_grid.resize(m_height, std::vector<bool>(m_width, true));
 }
@@ -58,7 +61,7 @@ Point Grid::getRandomWalkablePosition()
 std::vector<Point> Grid::getNeighbors(const Point& p) const
 {
     std::vector<Point> neighbors;
-    
+
     for (const auto& [dx, dy] : getDirections())
     {
         int nx = p.x + dx;
@@ -69,6 +72,13 @@ std::vector<Point> Grid::getNeighbors(const Point& p) const
         }
     }
     return neighbors;
+}
+
+float Grid::getDistance(const Point& a, const Point& b) const
+{
+    if (m_gridType)
+        return m_gridType->getDistance(a, b);
+    return hypotf(a.x - b.x, a.y - b.y);
 }
 
 std::vector<Point> Grid::findPath(const Point& start, const Point& end) const
@@ -89,7 +99,7 @@ std::vector<Point> Grid::findPath(const Point& start, const Point& end) const
 
     std::unordered_map<Point, NodeInfo> nodes;
     nodes[start].g = 0;
-    nodes[start].f = start.distance(end);
+    nodes[start].f = getDistance(start, end);
     openSet.emplace(start, nodes[start].f);
 
     while (!openSet.empty())
@@ -123,7 +133,7 @@ std::vector<Point> Grid::findPath(const Point& start, const Point& end) const
             {
                 nodes[neighbor].prev = current;
                 nodes[neighbor].g = tentative_g;
-                nodes[neighbor].f = tentative_g + neighbor.distance(end);
+                nodes[neighbor].f = tentative_g + getDistance(neighbor, end);
 
                 if (!nodes[neighbor].visited)
                 {
@@ -176,5 +186,7 @@ std::string Grid::makeGridWithPath(const Point& start, const Point& end)
 
 std::vector<Point> Grid::getDirections() const
 {
+    if (m_gridType)
+        return m_gridType->getDirections();
     return {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 }

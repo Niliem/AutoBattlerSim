@@ -13,7 +13,8 @@ Character::Character(std::string name, Point startPos, int seed)
       , m_gen(seed)
       , m_position(startPos)
 {
-    m_healthComp = std::make_unique<HealthComp>(20);
+    std::uniform_int_distribution<int> healthDist(m_minInitialHealth, m_maxInitialHealth);
+    m_healthComp = std::make_unique<HealthComp>(healthDist(m_gen));
     m_healthComp->OnHealthChanged = [this](float healthPercent)
     {
         OnHealthChanged(healthPercent);
@@ -58,25 +59,29 @@ void Character::update(float deltaTime)
                     OnMoveStarted(m_position, path[0], 1.0f / m_moveSpeed);
                 }
                 m_moveProgress += deltaTime * m_moveSpeed;
-                int pathIndex = 0;
-                while (m_moveProgress >= 1.0f && pathIndex < path.size())
-                {
-                    m_position = path[pathIndex++];
-                    OnMoveFinished(m_position);
-                    m_moveProgress -= 1.0f;
 
-                    if (pathIndex < path.size())
+                if (m_moveProgress >= 1.0f)
+                {
+                    int pathIndex = 0;
+                    while (m_moveProgress >= 1.0f && pathIndex < path.size())
                     {
-                        Point newPosition = path[pathIndex];
-                        OnMoveStarted(m_position, newPosition, 1.0f / m_moveSpeed);
+                        m_position = path[pathIndex++];
+                        OnMoveFinished(m_position);
+                        m_moveProgress -= 1.0f;
+
+                        if (pathIndex < path.size())
+                        {
+                            Point newPosition = path[pathIndex];
+                            OnMoveStarted(m_position, newPosition, 1.0f / m_moveSpeed);
+                        }
+                        else
+                        {
+                            m_moveProgress = 0.0f;
+                            break;
+                        }
                     }
-                    if (pathIndex >= path.size())
-                    {
-                        m_moveProgress = 0.0f;
-                        path = gridPtr->findPath(m_position, targetPtr->getPosition());
-                        break;
-                    }
-                }
+                    
+                }                
             }
         }
     }

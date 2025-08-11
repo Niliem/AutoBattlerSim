@@ -3,15 +3,18 @@
 #include <random>
 #include <string>
 #include <vector>
+
+#include "GridType.h"
 #include "Point.h"
 
 class Obstacle;
+
 
 // TODO: Create base class 
 class Grid
 {
 public:
-    Grid(int w, int h, int seed);
+    Grid(int w, int h, std::unique_ptr<GridType> gridType, int seed);
     virtual ~Grid() = default;
 
     int getWidth() const;
@@ -23,6 +26,7 @@ public:
     Point getRandomWalkablePosition();
     
     std::vector<Point> getNeighbors(const Point& p) const;
+    float getDistance(const Point& a, const Point& b) const;
     
     std::vector<Point> findPath(const Point& start, const Point& end) const;
 
@@ -36,7 +40,9 @@ private:
     std::vector<std::vector<bool>> m_grid;
 
     // TODO: override in hex grid
-    virtual std::vector<Point> getDirections() const;
+    std::vector<Point> getDirections() const;
 
     std::mt19937 m_gen;
+
+    std::unique_ptr<GridType> m_gridType;
 };

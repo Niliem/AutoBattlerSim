@@ -9,11 +9,12 @@
 #include "Simulation/Entities/Obstacle.h"
 #include "Simulation/Other/Team.h"
 #include "Simulation/Grid/Grid.h"
+#include "Simulation/Grid/GridType.h"
 
 
 void FCombatSimTask::DoWork()
 {
-    auto grid = std::make_shared<Grid>(100, 100, SimSeed);
+    auto grid = std::make_shared<Grid>(100, 100, std::make_unique<SquareGridType>(), SimSeed);
 
     std::vector<std::shared_ptr<Obstacle>> obstacles;
     {
@@ -68,9 +69,6 @@ void FCombatSimTask::DoWork()
 
     for (auto character : characters)
     {
-        if (!character->hasValidTarget())
-            character->findClosestTarget(teams);
-        
         character->OnAttack = [&, character](Point targetPosition, int damage)
         {
             UE_LOG(LogTemp, Warning, TEXT("%hs is dealing %i damage"), character->getName().c_str(), damage);
@@ -88,6 +86,7 @@ void FCombatSimTask::DoWork()
         };
         character->OnMoveStarted = [&, character](Point currentPosition, Point newPosition, float moveDuration)
         {
+            UE_LOG(LogTemp, Warning, TEXT("%hs start moving from [%d, %d] to [%d, %d]"), character->getName().c_str(), currentPosition.x, currentPosition.y, newPosition.x, newPosition.y);
             broadcastCharacterStartMovement(*character, newPosition, moveDuration);
         };
         character->OnMoveFinished = [&, character](Point newPosition)
@@ -96,6 +95,9 @@ void FCombatSimTask::DoWork()
             character->findClosestTarget(teams);
             broadcastCharacterFinishMovement(*character);
         };
+
+        if (!character->hasValidTarget())
+            character->findClosestTarget(teams);
     }
 
     float deltaTime = 1.0f / 120.0f;

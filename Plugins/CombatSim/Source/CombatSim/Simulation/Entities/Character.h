@@ -58,14 +58,16 @@ private:
 
     std::weak_ptr<Team> m_team;
 
+    int m_minInitialHealth = 2;
+    int m_maxInitialHealth = 5;
     std::unique_ptr<HealthComp> m_healthComp;
 
     // TODO: Create Attack action
     float m_attackCooldown = 1.0f; // 1 second
     float m_currentAttackCooldown = 0.0f;
     float m_attackRange = 1.0f;
-    int m_minDamage = 3;
-    int m_maxDamage = 5;
+    int m_minDamage = 1;
+    int m_maxDamage = 3;
 
     // TODO: Create Move action
     float m_moveSpeed = 2.0f; // 2 tiles per second
