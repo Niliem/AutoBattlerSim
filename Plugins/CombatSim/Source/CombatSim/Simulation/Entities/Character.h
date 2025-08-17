@@ -7,6 +7,7 @@
 
 #include "CombatSim/Simulation/Components/HealthComp.h"
 
+class Action;
 class Grid;
 class Team;
 
@@ -22,6 +23,8 @@ public:
         return m_name == other.getName();
     }
 
+    Action* addAction(std::unique_ptr<Action> action);
+
     void update(float deltaTime);
 
     const std::string& getName() const;    
@@ -31,19 +34,17 @@ public:
     std::shared_ptr<Team> getTeam() const;
 
     bool isAlive() const;
-    int getDamage();
     void takeDamage(int damage);
 
     bool hasValidTarget() const;
+    std::weak_ptr<Character> getTarget() const;
     void setTarget(std::weak_ptr<Character> newTarget);
 
     void printStatus() const;
     std::string getStatus() const;
     
-    void findClosestTarget(std::vector<std::shared_ptr<Team>>& teams);
+    void findClosestTarget(std::vector<std::shared_ptr<Team>>& teams, const Grid& grid);
     
-    std::weak_ptr<Grid> grid;
-
     std::function<void(Point, int)> OnAttack;
     std::function<void(Point, Point, float)> OnMoveStarted;
     std::function<void(Point)> OnMoveFinished;
@@ -62,16 +63,7 @@ private:
     int m_maxInitialHealth = 5;
     std::unique_ptr<HealthComp> m_healthComp;
 
-    // TODO: Create Attack action
-    float m_attackCooldown = 1.0f; // 1 second
-    float m_currentAttackCooldown = 0.0f;
-    float m_attackRange = 1.0f;
-    int m_minDamage = 1;
-    int m_maxDamage = 3;
-
-    // TODO: Create Move action
-    float m_moveSpeed = 2.0f; // 2 tiles per second
-    float m_moveProgress = 0.0f;
+    std::vector<std::unique_ptr<Action>> m_actions;
 
     std::weak_ptr<Character> m_target;
 };

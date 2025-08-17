@@ -5,6 +5,8 @@
 
 #include <format>
 
+#include "Simulation/Actions/AttackAction.h"
+#include "Simulation/Actions/MoveAction.h"
 #include "Simulation/Entities/Character.h"
 #include "Simulation/Entities/Obstacle.h"
 #include "Simulation/Other/Team.h"
@@ -69,6 +71,34 @@ void FCombatSimTask::DoWork()
 
     for (auto character : characters)
     {
+        // add actions
+        character->addAction(std::make_unique<MoveAction>(1.0f, *grid, const_cast<Point&>(character->getPosition()),
+        [character]()
+        {
+            return character->getTarget().lock()->getPosition();
+        }
+        , []()
+        {
+            return 1.0f;
+        }, SimSeed))->OnExecute = [character]()
+        {
+            character->OnMoveFinished(character->getPosition());
+        };
+
+        AttackConfig attackConfig {2, 4, 1.0f, 1.0f};
+        character->addAction(std::make_unique<AttackAction>(attackConfig, const_cast<Point&>(character->getPosition()),
+            [character]()
+        {
+            return character->getTarget().lock()->getPosition();
+        },
+        [character](int damage)
+        {
+            character->getTarget().lock()->takeDamage(damage);
+            character->OnAttack(character->getTarget().lock()->getPosition(), damage);
+        }, SimSeed));
+
+
+        // bind character delegates
         character->OnAttack = [&, character](Point targetPosition, int damage)
         {
             UE_LOG(LogTemp, Warning, TEXT("%hs is dealing %i damage"), character->getName().c_str(), damage);
@@ -92,17 +122,19 @@ void FCombatSimTask::DoWork()
         character->OnMoveFinished = [&, character](Point newPosition)
         {
             UE_LOG(LogTemp, Warning, TEXT("%hs moved to [%d, %d]"), character->getName().c_str(), newPosition.x, newPosition.y);
-            character->findClosestTarget(teams);
+            character->findClosestTarget(teams, *grid);
             broadcastCharacterFinishMovement(*character);
         };
 
         if (!character->hasValidTarget())
-            character->findClosestTarget(teams);
+            character->findClosestTarget(teams, *grid);
     }
 
-    float deltaTime = 1.0f / 120.0f;
+    float deltaTime = 1.0f / 120.0f; 
+    float tickRate = 1.0f / 4.0f; // 1 sec = 4 ticks;
 
     bSimRunning = true;
+    float accumulateDelta = 0.0f;
     while (bSimRunning)
     {
         FPlatformProcess::Sleep(deltaTime);
@@ -110,12 +142,17 @@ void FCombatSimTask::DoWork()
         if (!bSimRunning)
             return;
 
-        for (auto character : characters)
+        accumulateDelta += deltaTime;
+        while (accumulateDelta >= tickRate)
         {
-            if (!character->hasValidTarget())
-                character->findClosestTarget(teams);
+            for (auto character : characters)
+            {
+                if (!character->hasValidTarget())
+                    character->findClosestTarget(teams, *grid);
             
-            character->update(deltaTime);
+                character->update(1.0f);
+            }
+            accumulateDelta -= tickRate;
         }
 
         int defeatedCount = 0;
@@ -232,7 +269,6 @@ void FCombatSimTask::SpawnCharacter(int seed, std::shared_ptr<Grid> grid, std::s
     std::string name = std::format("Character_{},{}", position.x, position.y);
     auto character = std::make_shared<Character>(name, position, seed);
     character->setTeam(team);
-    character->grid = grid;
     characters.push_back(character);
     broadcastEntitySpawned(*character, character->getPosition(), character->getTeam()->getName().c_str());
 }
