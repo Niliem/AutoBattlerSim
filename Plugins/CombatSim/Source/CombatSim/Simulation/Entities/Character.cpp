@@ -3,15 +3,16 @@
 #include <iostream>
 #include <sstream>
 
+#include "CombatSim/Simulation/Actions/Action.h"
 #include "CombatSim/Simulation/Other/Team.h"
 #include "CombatSim/Simulation/Grid/Grid.h"
 #include "CombatSim/Simulation/Components/HealthComp.h"
 
 Character::Character(std::string name, Point startPos, int seed)
     : Entity(name)
-      , m_name(name)
-      , m_gen(seed)
-      , m_position(startPos)
+    , m_name(name)
+    , m_gen(seed)
+    , m_position(startPos)
 {
     std::uniform_int_distribution<int> healthDist(m_minInitialHealth, m_maxInitialHealth);
     m_healthComp = std::make_unique<HealthComp>(healthDist(m_gen));
@@ -23,67 +24,21 @@ Character::Character(std::string name, Point startPos, int seed)
     };
 }
 
+Action* Character::addAction(std::unique_ptr<Action> action)
+{
+    Action* act = action.get();
+    m_actions.emplace_back(std::move(action));
+    return act;
+}
+
 void Character::update(float deltaTime)
 {
     if (!isAlive())
         return;
 
-    if (auto targetPtr = m_target.lock())
+    for (const auto& action : m_actions)
     {
-        // TODO: Create Attack action
-        // attack target
-        if (m_currentAttackCooldown > 0.0f)
-        {
-            m_currentAttackCooldown -= deltaTime;
-        }
-        if (m_position.distance(targetPtr->getPosition()) <= m_attackRange)
-        {
-            if (m_currentAttackCooldown <= 0.0f)
-            {
-                float damage = getDamage();
-                OnAttack(targetPtr->getPosition(), damage);
-                targetPtr->takeDamage(damage);
-                m_currentAttackCooldown = m_attackCooldown;
-            }
-        }
-
-        // TODO: Create Move action
-        // move to target
-        else if (auto gridPtr = grid.lock())
-        {
-            auto path = gridPtr->findPath(m_position, targetPtr->getPosition());
-            if (path.size() > 0)
-            {
-                if (m_moveProgress <= 0.0f)
-                {
-                    OnMoveStarted(m_position, path[0], 1.0f / m_moveSpeed);
-                }
-                m_moveProgress += deltaTime * m_moveSpeed;
-
-                if (m_moveProgress >= 1.0f)
-                {
-                    int pathIndex = 0;
-                    while (m_moveProgress >= 1.0f && pathIndex < path.size())
-                    {
-                        m_position = path[pathIndex++];
-                        OnMoveFinished(m_position);
-                        m_moveProgress -= 1.0f;
-
-                        if (pathIndex < path.size())
-                        {
-                            Point newPosition = path[pathIndex];
-                            OnMoveStarted(m_position, newPosition, 1.0f / m_moveSpeed);
-                        }
-                        else
-                        {
-                            m_moveProgress = 0.0f;
-                            break;
-                        }
-                    }
-                    
-                }                
-            }
-        }
+        action->update(deltaTime);
     }
 }
 
@@ -112,12 +67,6 @@ std::shared_ptr<Team> Character::getTeam() const
     return m_team.lock();
 }
 
-int Character::getDamage()
-{
-    std::uniform_int_distribution<int> distribution(m_minDamage, m_maxDamage);
-    return distribution(m_gen);
-}
-
 void Character::takeDamage(int damage)
 {
     m_healthComp->decreaseHealth(damage);
@@ -131,6 +80,11 @@ bool Character::isAlive() const
 bool Character::hasValidTarget() const
 {
     return (m_target.lock() && m_target.lock()->isAlive());
+}
+
+std::weak_ptr<Character> Character::getTarget() const
+{
+    return m_target;
 }
 
 void Character::setTarget(std::weak_ptr<Character> newTarget)
@@ -150,7 +104,7 @@ std::string Character::getStatus() const
     return oss.str();
 }
 
-void Character::findClosestTarget(std::vector<std::shared_ptr<Team>>& teams)
+void Character::findClosestTarget(std::vector<std::shared_ptr<Team>>& teams, const Grid& grid)
 {
     std::unordered_map<std::shared_ptr<Character>, float> targetsByDistance;
 
@@ -168,7 +122,7 @@ void Character::findClosestTarget(std::vector<std::shared_ptr<Team>>& teams)
             if (member.get() == this)
                 continue;
 
-            targetsByDistance[member] = m_position.distance(member->getPosition());
+            targetsByDistance[member] = grid.getDistance(m_position, member->getPosition());
         }
     }
 

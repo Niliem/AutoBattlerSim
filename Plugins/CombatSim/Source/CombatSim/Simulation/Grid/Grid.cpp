@@ -81,16 +81,8 @@ float Grid::getDistance(const Point& a, const Point& b) const
     return hypotf(a.x - b.x, a.y - b.y);
 }
 
-std::vector<Point> Grid::findPath(const Point& start, const Point& end) const
+std::vector<Point> Grid::findPath(const Point& start, const Point& end, float acceptanceRadius) const
 {
-    struct NodeInfo
-    {
-        float g = std::numeric_limits<float>::max();
-        float f = std::numeric_limits<float>::max();
-        Point prev = {-1, -1};
-        bool visited = false;
-    };
-
     auto cmp = [](const std::pair<Point, float>& a, const std::pair<Point, float>& b)
     {
         return a.second > b.second;
@@ -102,23 +94,24 @@ std::vector<Point> Grid::findPath(const Point& start, const Point& end) const
     nodes[start].f = getDistance(start, end);
     openSet.emplace(start, nodes[start].f);
 
+    Point closestPoint = start;
+    float closestDistance = getDistance(start, end);
+
     while (!openSet.empty())
     {
         Point current = openSet.top().first;
         openSet.pop();
 
-        if (current == end)
+        if (current.distance(end) <= acceptanceRadius)
         {
-            std::vector<Point> path;
-            Point p = end;
-            while (p != start)
-            {
-                path.push_back(p);
-                p = nodes[p].prev;
-            }
-            //path.push_back(start);
-            std::ranges::reverse(path);
-            return path;
+            return reconstructPath(nodes, current);
+        }
+        
+        float currentDistance = current.distance(end);
+        if (currentDistance < closestDistance)
+        {
+            closestDistance = currentDistance;
+            closestPoint = current;
         }
 
         if (nodes[current].visited)
@@ -141,6 +134,11 @@ std::vector<Point> Grid::findPath(const Point& start, const Point& end) const
                 }
             }
         }
+    }
+    
+    if (acceptanceRadius > 0.0f && closestPoint != start)
+    {
+        return reconstructPath(nodes, closestPoint);
     }
 
     return {};
@@ -182,6 +180,21 @@ std::string Grid::makeGridWithPath(const Point& start, const Point& end)
     }
 
     return output;
+}
+
+std::vector<Point> Grid::reconstructPath(const std::unordered_map<Point, NodeInfo>& nodes, Point end) const
+{
+    std::vector<Point> path;
+    Point current = end;
+    
+    while (nodes.at(current).prev != Point(-1, -1)) {
+        path.push_back(current);
+        current = nodes.at(current).prev;
+    }
+    path.push_back(current);
+    
+    std::ranges::reverse(path);
+    return path;
 }
 
 std::vector<Point> Grid::getDirections() const
